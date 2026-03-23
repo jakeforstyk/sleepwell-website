@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sleepwell — Sleep Cycle Calculator</title>
+<meta name="description" content="Calculate the best times to fall asleep or wake up based on natural sleep cycles. Wake up refreshed, not groggy.">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6947379601662318"
+     crossorigin="anonymous"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --night-deep: #0a0e1a;
+    --night-mid: #111833;
+    --night-light: #1a2347;
+    --gold-warm: #d4a853;
+    --gold-light: #e8c97a;
+    --gold-glow: #f0d68a;
+    --gold-dim: #a07830;
+    --cream: #f5e6c8;
+    --cream-soft: #e8d5b0;
+    --text-light: #c8b89a;
+    --text-dim: #8a7e6a;
+    --star-white: #fffbe6;
+  }
+
+  html { font-size: 16px; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--night-deep);
+    color: var(--cream);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* ── Starfield ── */
+  .starfield {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .star {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--star-white);
+  }
+
+  .star--sm { width: 1px; height: 1px; opacity: 0.4; }
+  .star--md { width: 2px; height: 2px; opacity: 0.6; }
+  .star--lg { width: 3px; height: 3px; opacity: 0.8; box-shadow: 0 0 4px 1px rgba(255,251,230,0.3); }
+
+  @keyframes twinkle1 { 0%,100%{opacity:0.3} 50%{opacity:0.8} }
+  @keyframes twinkle2 { 0%,100%{opacity:0.5} 50%{opacity:1} }
+  @keyframes twinkle3 { 0%,100%{opacity:0.2} 50%{opacity:0.7} }
+
+  .twinkle-1 { animation: twinkle1 3s ease-in-out infinite; }
+  .twinkle-2 { animation: twinkle2 4s ease-in-out infinite; }
+  .twinkle-3 { animation: twinkle3 5s ease-in-out infinite; }
+
+  /* ── Gradient overlay ── */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background:
+      radial-gradient(ellipse at 20% 0%, rgba(26, 35, 71, 0.8) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 10%, rgba(42, 30, 60, 0.6) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 100%, rgba(20, 15, 40, 0.9) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ── Main container ── */
+  .container {
+    position: relative;
+    z-index: 2;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 40px 24px 60px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── Header / Brand ── */
+  .brand {
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  .brand-icon {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 16px;
+    position: relative;
+  }
+
+  .moon-svg {
+    width: 72px;
+    height: 72px;
+    filter: drop-shadow(0 0 12px rgba(212,168,83,0.4));
+  }
+
+  .brand h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 300;
+    font-size: 2.8rem;
+    color: var(--gold-light);
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 30px rgba(212,168,83,0.25);
+  }
+
+  .brand .tagline {
+    font-family: 'Crimson Text', serif;
+    font-style: italic;
+    font-size: 1.05rem;
+    color: var(--text-light);
+    margin-top: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  /* ── Divider ── */
+  .divider {
+    width: 120px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+    margin: 28px auto;
+  }
+
+  /* ── Mode toggle ── */
+  .mode-toggle {
+    display: flex;
+    gap: 0;
+    margin-bottom: 32px;
+    border: 1px solid rgba(212,168,83,0.2);
+    border-radius: 8px;
+    overflow: hidden;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .mode-btn {
+    flex: 1;
+    padding: 14px 16px;
+    font-family: 'Crimson Text', serif;
+    font-size: 1rem;
+    color: var(--text-dim);
+    background: rgba(10, 14, 26, 0.5);
+    border: none;
+    cursor: pointer;
+    transition: all 0.4s ease;
+    letter-spacing: 0.02em;
+  }
+
+  .mode-btn:first-child { border-right: 1px solid rgba(212,168,83,0.15); }
+
+  .mode-btn.active {
+    background: rgba(212,168,83,0.1);
+    color: var(--gold-light);
+    text-shadow: 0 0 10px rgba(212,168,83,0.2);
+  }
+
+  .mode-btn:hover:not(.active) {
+    color: var(--cream-soft);
+    background: rgba(212,168,83,0.05);
+  }
+
+  /* ── Input section ── */
+  .input-section {
+    text-align: center;
+    margin-bottom: 12px;
+    width: 100%;
+  }
+
+  .input-label {
+    font-family: 'Crimson Text', serif;
+    font-size: 1.15rem;
+    color: var(--text-light);
+    margin-bottom: 20px;
+    font-style: italic;
+  }
+
+  /* ── Clock-inspired time picker ── */
+  .time-picker-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: 20px 0;
+  }
+
+  .time-input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .time-input-group label {
+    font-family: 'Crimson Text', serif;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .time-scroll {
+    width: 72px;
+    height: 64px;
+    background: rgba(17,24,51,0.8);
+    border: 1px solid rgba(212,168,83,0.25);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .time-scroll input {
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2rem;
+    font-weight: 300;
+    color: var(--gold-light);
+    background: transparent;
+    border: none;
+    outline: none;
+    -moz-appearance: textfield;
+  }
+
+  .time-scroll input::-webkit-inner-spin-button,
+  .time-scroll input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+  }
+
+  .time-scroll input:focus {
+    color: var(--gold-glow);
+  }
+
+  .time-colon {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2rem;
+    color: var(--gold-dim);
+    padding-top: 18px;
+  }
+
+  .ampm-toggle {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-left: 8px;
+    padding-top: 18px;
+  }
+
+  .ampm-btn {
+    padding: 6px 12px;
+    font-family: 'Crimson Text', serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    border: 1px solid rgba(212,168,83,0.2);
+    background: rgba(10, 14, 26, 0.5);
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+  }
+
+  .ampm-btn.active {
+    background: rgba(212,168,83,0.15);
+    color: var(--gold-light);
+    border-color: rgba(212,168,83,0.4);
+  }
+
+  /* ── Calculate button ── */
+  .calc-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 24px;
+    padding: 14px 36px;
+    font-family: 'Crimson Text', serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.06em;
+    color: var(--night-deep);
+    background: linear-gradient(135deg, var(--gold-warm), var(--gold-light));
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 20px rgba(212,168,83,0.25);
+  }
+
+  .calc-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 28px rgba(212,168,83,0.35);
+  }
+
+  .calc-btn:active { transform: translateY(0); }
+
+  /* ── "Sleep now" button ── */
+  .sleep-now-section {
+    text-align: center;
+    width: 100%;
+  }
+
+  .sleep-now-section .input-label {
+    margin-bottom: 8px;
+  }
+
+  .current-time-display {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 3.2rem;
+    font-weight: 300;
+    color: var(--gold-light);
+    text-shadow: 0 0 20px rgba(212,168,83,0.2);
+    margin: 12px 0 4px;
+  }
+
+  .current-time-display .current-ampm {
+    font-size: 1.2rem;
+    color: var(--gold-dim);
+    margin-left: 4px;
+    vertical-align: super;
+  }
+
+  .current-date-display {
+    font-family: 'Crimson Text', serif;
+    font-size: 0.95rem;
+    color: var(--text-dim);
+    font-style: italic;
+    margin-bottom: 20px;
+  }
+
+  /* ── Results ── */
+  .results {
+    width: 100%;
+    margin-top: 32px;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: all 0.5s ease;
+  }
+
+  .results.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .results-header {
+    font-family: 'Crimson Text', serif;
+    font-style: italic;
+    font-size: 1rem;
+    color: var(--text-light);
+    text-align: center;
+    margin-bottom: 20px;
+  }
+
+  .cycle-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .cycle-card {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    background: rgba(17, 24, 51, 0.6);
+    border: 1px solid rgba(212,168,83,0.1);
+    border-radius: 10px;
+    transition: all 0.3s ease;
+    gap: 16px;
+    backdrop-filter: blur(4px);
+  }
+
+  .cycle-card:hover {
+    border-color: rgba(212,168,83,0.25);
+    background: rgba(17, 24, 51, 0.8);
+  }
+
+  .cycle-card.recommended {
+    border-color: rgba(212,168,83,0.35);
+    background: rgba(212,168,83,0.06);
+    box-shadow: 0 0 20px rgba(212,168,83,0.08);
+  }
+
+  .cycle-number {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid rgba(212,168,83,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1rem;
+    color: var(--gold-dim);
+    flex-shrink: 0;
+  }
+
+  .cycle-card.recommended .cycle-number {
+    background: rgba(212,168,83,0.15);
+    border-color: rgba(212,168,83,0.4);
+    color: var(--gold-light);
+  }
+
+  .cycle-info { flex: 1; }
+
+  .cycle-time {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: var(--cream);
+  }
+
+  .cycle-card.recommended .cycle-time {
+    color: var(--gold-light);
+  }
+
+  .cycle-detail {
+    font-family: 'Crimson Text', serif;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .cycle-badge {
+    font-family: 'Crimson Text', serif;
+    font-size: 0.75rem;
+    color: var(--gold-warm);
+    background: rgba(212,168,83,0.1);
+    padding: 3px 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(212,168,83,0.2);
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+
+  /* ── Info note ── */
+  .info-note {
+    margin-top: 28px;
+    padding: 16px 20px;
+    background: rgba(17,24,51,0.4);
+    border-left: 2px solid rgba(212,168,83,0.2);
+    border-radius: 0 8px 8px 0;
+    font-family: 'Crimson Text', serif;
+    font-size: 0.9rem;
+    color: var(--text-dim);
+    line-height: 1.6;
+    font-style: italic;
+  }
+
+  .info-note strong {
+    color: var(--text-light);
+    font-weight: 600;
+    font-style: normal;
+  }
+
+  /* ── How it works ── */
+  .how-it-works {
+    margin-top: 48px;
+    text-align: center;
+    width: 100%;
+  }
+
+  .how-it-works h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 400;
+    font-size: 1.5rem;
+    color: var(--gold-dim);
+    margin-bottom: 20px;
+  }
+
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    text-align: left;
+  }
+
+  .step {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 12px 0;
+  }
+
+  .step-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(212,168,83,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .step-text {
+    font-family: 'Crimson Text', serif;
+    font-size: 0.95rem;
+    color: var(--text-light);
+    line-height: 1.5;
+  }
+
+  .step-text strong {
+    color: var(--cream);
+  }
+
+  /* ── Footer ── */
+  .footer {
+    margin-top: 56px;
+    text-align: center;
+    padding-top: 24px;
+    border-top: 1px solid rgba(212,168,83,0.08);
+  }
+
+  .footer p {
+    font-family: 'Crimson Text', serif;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 480px) {
+    .container { padding: 28px 16px 48px; }
+    .brand h1 { font-size: 2.2rem; }
+    .current-time-display { font-size: 2.6rem; }
+    .mode-toggle { max-width: 100%; }
+    .time-scroll { width: 64px; height: 56px; }
+    .time-scroll input { font-size: 1.7rem; }
+    .cycle-card { padding: 14px 16px; }
+    .cycle-time { font-size: 1.3rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Starfield (generated by JS) -->
+<div class="starfield" id="starfield"></div>
+
+<div class="container">
+  <!-- Brand -->
+  <div class="brand">
+    <div class="brand-icon">
+      <svg class="moon-svg" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="36" cy="36" r="28" fill="none" stroke="url(#moonGrad)" stroke-width="1.5" opacity="0.3"/>
+        <path d="M44 16C38.5 20.5 35.5 27.5 35.5 35.5C35.5 43.5 38.5 50.5 44 55C34 55 24 47 24 35.5C24 24 34 16 44 16Z" fill="url(#moonFill)" opacity="0.9"/>
+        <circle cx="20" cy="18" r="1" fill="#fffbe6" opacity="0.5"/>
+        <circle cx="54" cy="22" r="0.8" fill="#fffbe6" opacity="0.4"/>
+        <circle cx="16" cy="42" r="0.6" fill="#fffbe6" opacity="0.3"/>
+        <circle cx="56" cy="48" r="1" fill="#fffbe6" opacity="0.4"/>
+        <circle cx="48" cy="12" r="0.5" fill="#fffbe6" opacity="0.35"/>
+        <defs>
+          <linearGradient id="moonGrad" x1="8" y1="8" x2="64" y2="64">
+            <stop offset="0%" stop-color="#d4a853" />
+            <stop offset="100%" stop-color="#a07830" />
+          </linearGradient>
+          <linearGradient id="moonFill" x1="24" y1="16" x2="44" y2="55">
+            <stop offset="0%" stop-color="#e8c97a" />
+            <stop offset="100%" stop-color="#d4a853" />
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <h1>Sleepwell</h1>
+    <p class="tagline">Wake gently with your natural rhythm</p>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Mode Toggle -->
+  <div class="mode-toggle">
+    <button class="mode-btn active" data-mode="wake" onclick="setMode('wake')">I need to wake up at...</button>
+    <button class="mode-btn" data-mode="sleep" onclick="setMode('sleep')">I'm going to sleep now</button>
+  </div>
+
+  <!-- Wake mode: time picker -->
+  <div class="input-section" id="wakeMode">
+    <p class="input-label">When do you need to rise?</p>
+    <div class="time-picker-wrap">
+      <div class="time-input-group">
+        <label>Hour</label>
+        <div class="time-scroll">
+          <input type="number" id="hourInput" value="7" min="1" max="12" />
+        </div>
+      </div>
+      <span class="time-colon">:</span>
+      <div class="time-input-group">
+        <label>Min</label>
+        <div class="time-scroll">
+          <input type="number" id="minInput" value="00" min="0" max="59" />
+        </div>
+      </div>
+      <div class="ampm-toggle">
+        <button class="ampm-btn active" id="amBtn" onclick="setAmPm('AM')">AM</button>
+        <button class="ampm-btn" id="pmBtn" onclick="setAmPm('PM')">PM</button>
+      </div>
+    </div>
+    <button class="calc-btn" onclick="calculate()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Calculate Bedtimes
+    </button>
+  </div>
+
+  <!-- Sleep mode: current time -->
+  <div class="sleep-now-section" id="sleepMode" style="display:none;">
+    <p class="input-label">The time is currently</p>
+    <div class="current-time-display" id="currentTime"></div>
+    <p class="current-date-display" id="currentDate"></p>
+    <button class="calc-btn" onclick="calculateFromNow()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Calculate Wake Times
+    </button>
+  </div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <p class="results-header" id="resultsHeader"></p>
+    <div class="cycle-cards" id="cycleCards"></div>
+    <div class="info-note">
+      <strong>A note on sleep cycles:</strong> Each cycle lasts roughly 90 minutes, and the average person takes about 15 minutes to drift off. Waking between cycles — rather than in the middle of one — is the secret to feeling rested rather than groggy.
+    </div>
+  </div>
+
+  <!-- How it works -->
+  <div class="how-it-works">
+    <div class="divider" style="margin:0 auto 28px;"></div>
+    <h2>How It Works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-icon">1</div>
+        <p class="step-text"><strong>Sleep comes in cycles.</strong> Each one lasts about 90 minutes and moves through light sleep, deep sleep, and REM — the stage where you dream.</p>
+      </div>
+      <div class="step">
+        <div class="step-icon">2</div>
+        <p class="step-text"><strong>Timing is everything.</strong> Waking at the end of a cycle (rather than the middle) means you surface naturally, feeling clear-headed instead of foggy.</p>
+      </div>
+      <div class="step">
+        <div class="step-icon">3</div>
+        <p class="step-text"><strong>We do the math.</strong> Sleepwell counts backward (or forward) in 90-minute intervals, adding 15 minutes for the time it takes to fall asleep, so you can plan the perfect night.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>&copy; 2026 Sleepwell &middot; Rest well, rise gently</p>
+  </div>
+</div>
+
+<script>
+  // ── Stars ──
+  (function generateStars() {
+    const field = document.getElementById('starfield');
+    const count = 120;
+    for (let i = 0; i < count; i++) {
+      const star = document.createElement('div');
+      const size = Math.random();
+      let cls = 'star star--sm';
+      if (size > 0.85) cls = 'star star--lg';
+      else if (size > 0.6) cls = 'star star--md';
+
+      const twinkle = Math.random();
+      if (twinkle > 0.7) cls += ' twinkle-1';
+      else if (twinkle > 0.5) cls += ' twinkle-2';
+      else if (twinkle > 0.35) cls += ' twinkle-3';
+
+      star.className = cls;
+      star.style.left = Math.random() * 100 + '%';
+      star.style.top = Math.random() * 100 + '%';
+      star.style.animationDelay = (Math.random() * 5) + 's';
+      field.appendChild(star);
+    }
+  })();
+
+  // ── State ──
+  let currentMode = 'wake';
+  let ampm = 'AM';
+  let clockInterval;
+
+  // ── Mode switching ──
+  function setMode(mode) {
+    currentMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.mode === mode);
+    });
+    document.getElementById('wakeMode').style.display = mode === 'wake' ? '' : 'none';
+    document.getElementById('sleepMode').style.display = mode === 'sleep' ? '' : 'none';
+    document.getElementById('results').classList.remove('visible');
+
+    if (mode === 'sleep') startClock();
+    else stopClock();
+  }
+
+  // ── AM/PM ──
+  function setAmPm(val) {
+    ampm = val;
+    document.getElementById('amBtn').classList.toggle('active', val === 'AM');
+    document.getElementById('pmBtn').classList.toggle('active', val === 'PM');
+  }
+
+  // ── Live clock ──
+  function updateClock() {
+    const now = new Date();
+    let h = now.getHours();
+    const m = now.getMinutes();
+    const ap = h >= 12 ? 'PM' : 'AM';
+    if (h === 0) h = 12;
+    else if (h > 12) h -= 12;
+
+    document.getElementById('currentTime').innerHTML =
+      `${h}:${String(m).padStart(2,'0')}<span class="current-ampm">${ap}</span>`;
+
+    const opts = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
+    document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', opts);
+  }
+
+  function startClock() { updateClock(); clockInterval = setInterval(updateClock, 10000); }
+  function stopClock() { clearInterval(clockInterval); }
+
+  // ── Format helpers ──
+  function formatTime(date) {
+    let h = date.getHours();
+    const m = date.getMinutes();
+    const ap = h >= 12 ? 'PM' : 'AM';
+    if (h === 0) h = 12;
+    else if (h > 12) h -= 12;
+    return `${h}:${String(m).padStart(2,'0')} ${ap}`;
+  }
+
+  function hoursAndMins(ms) {
+    const totalMin = Math.round(ms / 60000);
+    const hrs = Math.floor(totalMin / 60);
+    const mins = totalMin % 60;
+    if (mins === 0) return `${hrs} hr`;
+    return `${hrs} hr ${mins} min`;
+  }
+
+  // ── Calculate from wake time ──
+  function calculate() {
+    let hour = parseInt(document.getElementById('hourInput').value) || 7;
+    let min = parseInt(document.getElementById('minInput').value) || 0;
+
+    // Convert to 24h
+    if (ampm === 'AM' && hour === 12) hour = 0;
+    else if (ampm === 'PM' && hour !== 12) hour += 12;
+
+    const now = new Date();
+    const wake = new Date();
+    wake.setHours(hour, min, 0, 0);
+    if (wake <= now) wake.setDate(wake.getDate() + 1);
+
+    const FALL_ASLEEP = 15 * 60000;
+    const CYCLE = 90 * 60000;
+    const cycles = [6, 5, 4, 3];
+    const times = cycles.map(c => {
+      const bedtime = new Date(wake.getTime() - (c * CYCLE) - FALL_ASLEEP);
+      return { cycles: c, time: bedtime, duration: c * CYCLE };
+    });
+
+    renderResults(times, 'bedtime', formatTime(wake));
+  }
+
+  // ── Calculate from now ──
+  function calculateFromNow() {
+    const now = new Date();
+    const FALL_ASLEEP = 15 * 60000;
+    const CYCLE = 90 * 60000;
+    const sleepStart = new Date(now.getTime() + FALL_ASLEEP);
+
+    const cycles = [3, 4, 5, 6];
+    const times = cycles.map(c => {
+      const wakeTime = new Date(sleepStart.getTime() + (c * CYCLE));
+      return { cycles: c, time: wakeTime, duration: c * CYCLE };
+    });
+
+    renderResults(times, 'wake', formatTime(now));
+  }
+
+  // ── Render results ──
+  function renderResults(times, type, refTime) {
+    const header = document.getElementById('resultsHeader');
+    const cards = document.getElementById('cycleCards');
+    const results = document.getElementById('results');
+
+    if (type === 'bedtime') {
+      header.textContent = `To wake at ${refTime}, consider these bedtimes:`;
+    } else {
+      header.textContent = `If you head to sleep now, try waking at:`;
+    }
+
+    cards.innerHTML = '';
+    times.forEach((t, i) => {
+      const isRec = t.cycles === 5 || t.cycles === 6;
+      const card = document.createElement('div');
+      card.className = 'cycle-card' + (isRec ? ' recommended' : '');
+      card.style.animationDelay = (i * 0.08) + 's';
+
+      const label = t.cycles >= 5 ? 'Recommended' : (t.cycles === 4 ? 'Okay' : 'Minimum');
+
+      card.innerHTML = `
+        <div class="cycle-number">${t.cycles}</div>
+        <div class="cycle-info">
+          <div class="cycle-time">${formatTime(t.time)}</div>
+          <div class="cycle-detail">${t.cycles} cycles &middot; ${hoursAndMins(t.duration)} of sleep</div>
+        </div>
+        ${isRec ? `<span class="cycle-badge">${label}</span>` : `<span class="cycle-badge" style="border-color:rgba(212,168,83,0.1);color:var(--text-dim);background:rgba(212,168,83,0.03);">${label}</span>`}
+      `;
+      cards.appendChild(card);
+    });
+
+    results.classList.add('visible');
+    results.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  // ── Input validation ──
+  document.getElementById('hourInput').addEventListener('input', function() {
+    let v = parseInt(this.value);
+    if (v < 1) this.value = 1;
+    if (v > 12) this.value = 12;
+  });
+  document.getElementById('minInput').addEventListener('input', function() {
+    let v = parseInt(this.value);
+    if (v < 0) this.value = 0;
+    if (v > 59) this.value = 59;
+  });
+  // Pad minutes on blur
+  document.getElementById('minInput').addEventListener('blur', function() {
+    this.value = String(this.value).padStart(2, '0');
+  });
+</script>
+</body>
+</html>
